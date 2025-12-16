@@ -7,4 +7,8 @@ button {
     width: auto;
     vertical-align: middle;
   }
+
+  .action-button:target {
+    background-color: var(--theme-accent-darker);
+  }
 }
