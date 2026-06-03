@@ -13,6 +13,7 @@ export interface SearchParametersDialogData {
   usedFields: string[];
   condition?: ScientificCondition;
   humanNameMap?: { [key: string]: string };
+  dialogTitle?: string;
 }
 
 @Component({
@@ -56,7 +57,7 @@ export class SearchParametersDialogComponent {
       Validators.required,
       Validators.minLength(9),
     ]),
-    rhs: new FormControl<string | number | number[]>(
+    rhs: new FormControl<string | number | (string | number)[]>(
       this.data.condition?.rhs || "",
       [Validators.required, Validators.minLength(1)],
     ),
@@ -107,26 +108,8 @@ export class SearchParametersDialogComponent {
         (key) => this.humanNameMap[key] === lhs,
       ) || lhs;
 
-    const isValidSelection = this.parameterKeys.some(
-      (key) => key === metadataKey || this.humanNameMap[key] === lhs,
-    );
-
-    if (!isValidSelection) {
-      this.snackBar.open("Please select a valid field from the list", "Close", {
-        duration: 2000,
-        panelClass: ["snackbar-warning"],
-      });
-      return;
-    }
-
     if (this.data.usedFields && this.data.usedFields.includes(metadataKey)) {
       this.snackBar.open("Field already used", "Close", {
-        duration: 2000,
-        panelClass: ["snackbar-warning"],
-      });
-      return;
-    } else if (!this.parameterKeys.includes(metadataKey)) {
-      this.snackBar.open("Field does not exist", "Close", {
         duration: 2000,
         panelClass: ["snackbar-warning"],
       });

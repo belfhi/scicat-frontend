@@ -25,7 +25,6 @@ import { TableCoreDirective } from "../cores/table.core.directive";
 import { TableService } from "./dynamic-mat-table.service";
 import { TableField } from "../models/table-field.model";
 import { AbstractFilter } from "./extensions/filter/compare/abstract-filter";
-import { HeaderFilterComponent } from "./extensions/filter/header-filter.component";
 import { MatDialog } from "@angular/material/dialog";
 import {
   trigger,
@@ -78,6 +77,7 @@ import {
 } from "../models/table-menu.model";
 import { TableDataSource } from "../cores/table-data-source";
 import { DatePipe } from "@angular/common";
+import { AppConfigService } from "app-config.service";
 
 export interface IDynamicCell {
   row: TableRow;
@@ -216,11 +216,7 @@ export class DynamicMatTableComponent<T extends TableRow>
   @ViewChild("printContentRef", { static: true }) printContentRef!: ElementRef;
   @ViewChild("tbl", { static: true }) tbl: ElementRef;
 
-  @ContentChildren(HeaderFilterComponent)
-
   // Other public fields
-  headerFilterList!: QueryList<HeaderFilterComponent>;
-
   printing = true;
   printTemplate: TemplateRef<any> = null;
   public resizeColumn: ResizeColumn = new ResizeColumn();
@@ -324,6 +320,8 @@ export class DynamicMatTableComponent<T extends TableRow>
   @Input() emptyIcon = "info";
   @Input() sideFilterCollapsed = false;
 
+  appConfig = this.appConfigService.getConfig();
+
   constructor(
     public dialog: MatDialog,
     private renderer: Renderer2,
@@ -334,6 +332,7 @@ export class DynamicMatTableComponent<T extends TableRow>
     private overlayPositionBuilder: OverlayPositionBuilder,
     public readonly config: TableSetting,
     private datePipe: DatePipe,
+    public appConfigService: AppConfigService,
   ) {
     super(tableService, cdr, config);
 
@@ -533,6 +532,9 @@ export class DynamicMatTableComponent<T extends TableRow>
         if (this.standardDataSource) {
           this.standardDataSource.data = data;
         }
+        if (this.tvsDataSource) {
+          this.tvsDataSource.data = data;
+        }
       });
     }
   }
@@ -604,12 +606,6 @@ export class DynamicMatTableComponent<T extends TableRow>
     } else {
       return null;
     }
-  }
-
-  filter_onChanged(column: TableField<T>, filter: AbstractFilter[]) {
-    this.standardDataSource.setFilter(column.name, filter).subscribe(() => {
-      this.clearSelection();
-    });
   }
 
   onContextMenu(event: MouseEvent, column: TableField<T>, row: any) {
@@ -811,9 +807,6 @@ export class DynamicMatTableComponent<T extends TableRow>
           this.rowSelectionModel,
         );
       }
-    } else if (e.type === TableMenuAction.FilterClear) {
-      this.standardDataSource.clearFilter();
-      this.headerFilterList.forEach((hf) => hf.clearColumn_OnClick());
     } else if (e.type === TableMenuAction.Print) {
       this.onTableEvent.emit({
         event: TableEventType.ExportData,
@@ -883,6 +876,11 @@ export class DynamicMatTableComponent<T extends TableRow>
     this.globalSearchUpdate.next("");
     this.globalTextSearchChange.emit("");
     this.globalTextSearchApply.emit("");
+  }
+
+  onGlobalTextSearchEnter(event: Event) {
+    event.preventDefault();
+    this.onGlobalTextSearchApply();
   }
 
   autoHeight() {

@@ -72,13 +72,19 @@ export class MetadataFloatFormat {
   maxCutoff: number; // using scientific notation above this cutoff
 }
 
+export class DefaultTab {
+  proposal: string;
+}
+
 export interface AppConfigInterface {
   allowConfigOverrides?: boolean;
+  addScientificMetadataKeysAsColumn?: boolean;
   skipSciCatLoginPageEnabled?: boolean;
   accessTokenPrefix: string;
   addDatasetEnabled: boolean;
   archiveWorkflowEnabled: boolean;
   datasetJsonScientificMetadata: boolean;
+  datasetPageSizeOptions?: number[];
   datasetReduceEnabled: boolean;
   datasetDetailsShowMissingProposalId: boolean;
   datasetActionsEnabled: boolean;
@@ -155,13 +161,17 @@ export interface AppConfigInterface {
   datasetDetailComponent?: DatasetDetailComponentConfig;
   labelsLocalization?: LabelsLocalization;
   dateFormat?: string;
+  timezone?: string;
   defaultMainPage?: MainPageConfiguration;
   siteHeaderLogoUrl?: string;
   mainMenu?: MainMenuConfiguration;
   supportEmail?: string;
-  checkBoxFilterClickTrigger?: boolean;
   hideEmptyMetadataTable?: boolean;
   ingestorComponent?: IngestorComponentConfig;
+  defaultTab?: DefaultTab;
+  statusBannerMessage?: string;
+  statusBannerCode?: "INFO" | "WARN";
+  autoApplyFilters?: boolean;
 }
 
 function isMainPageConfiguration(obj: any): obj is MainPageConfiguration {
@@ -218,10 +228,10 @@ export class AppConfigService {
 
   async loadAppConfig(): Promise<void> {
     try {
-      const config = await this.http
-        .get("/api/v3/admin/config")
-        .pipe(timeout(2000))
-        .toPromise();
+      const config = await firstValueFrom(
+        this.http.get("/api/v3/admin/config").pipe(timeout(2000)),
+      );
+
       this.appConfig = Object.assign({}, this.appConfig, config);
     } catch (err) {
       console.log("No config available in backend, trying with local config.");
@@ -255,12 +265,20 @@ export class AppConfigService {
       config.dateFormat = "yyyy-MM-dd HH:mm";
     }
 
+    if (!config.timezone) {
+      config.timezone = "UTC";
+    }
+
     if (config.metadataFloatFormatEnabled && !config.metadataFloatFormat) {
       config.metadataFloatFormat = {
         significantDigits: 3,
         minCutoff: 0.001,
         maxCutoff: 1000,
       };
+    }
+
+    if (!config.datasetPageSizeOptions?.length) {
+      config.datasetPageSizeOptions = [5, 10, 25, 100];
     }
 
     this.appConfig = config;
@@ -270,7 +288,6 @@ export class AppConfigService {
     if (!this.appConfig) {
       console.error("AppConfigService: Configuration not loaded!");
     }
-
     return this.appConfig as AppConfigInterface;
   }
 }

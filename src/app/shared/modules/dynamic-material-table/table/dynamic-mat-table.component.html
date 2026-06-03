@@ -17,6 +17,14 @@
         (keydown.escape)="onGlobalTextSearchClear()"
         data-cy="text-search"
       />
+      <span
+        matSuffix
+        class="enter-hint"
+        matTooltip="Press Enter to search"
+        matTooltipPosition="below"
+        matTooltipShowDelay="500"
+        >↵</span
+      >
       <button
         mat-icon-button
         matSuffix
@@ -135,35 +143,32 @@
           }"
           (mousedown)="onResizeColumn($event, i, 'left')"
         ></div>
-        <header-filter
-          [field]="column"
-          (filterChanged)="filter_onChanged(column, $event)"
-          [filters]="tvsDataSource.getFilter(column.name)"
+        <mat-icon
+          class="column-icon"
+          [ngStyle]="{ color: column?.iconColor }"
+          >{{ column?.icon }}</mat-icon
         >
-          <mat-icon
-            class="column-icon"
-            [ngStyle]="{ color: column?.iconColor }"
-            >{{ column?.icon }}</mat-icon
-          >
-          <mat-icon
-            *ngIf="column?.draggable !== false"
-            class="drag-indicator"
-            cdkDragHandle
-            >drag_indicator</mat-icon
-          >
-          <div
-            mat-sort-header
-            [matTooltip]="
-              column.tooltip || column.header || column.name
-                | translate: localization
-            "
-            matTooltipClass="cell-tooltip"
-            [disabled]="column.sort === 'none'"
-            class="header-caption"
-          >
-            {{ column.header || column.name | translate: localization }}
-          </div>
-        </header-filter>
+        <mat-icon
+          *ngIf="column?.draggable !== false"
+          class="drag-indicator"
+          cdkDragHandle
+          >drag_indicator</mat-icon
+        >
+        <div
+          mat-sort-header
+          [matTooltip]="
+            column.tooltip || column.header || column.name
+              | translate: localization
+          "
+          matTooltipClass="cell-tooltip"
+          matTooltipPosition="above"
+          matTooltipShowDelay="500"
+          [disabled]="column.sort === 'none'"
+          class="header-caption"
+        >
+          {{ column.header || column.name | translate: localization }}
+        </div>
+
         <!-- class="right-resize-handler" -->
         <div
           class="resize-handler"
@@ -243,7 +248,13 @@
                 </ng-template>
               </ng-container>
               <ng-template #noHoverCell>
-                <span [innerHTML]="columnName(row, column)"></span>
+                <span
+                  class="tooltip-anchor"
+                  [innerHTML]="columnName(row, column)"
+                  matTooltip="{{ columnName(row, column) }}"
+                  matTooltipPosition="above"
+                  matTooltipShowDelay="500"
+                ></span>
               </ng-template>
             </label>
           </ng-container>
@@ -259,7 +270,13 @@
               [ngStyle]="ellipsis(column)"
               class="label-cell"
             >
-              {{ getColumnValue(row, column) }}
+              <span
+                matTooltip="{{ getColumnValue(row, column) }}"
+                matTooltipPosition="above"
+                matTooltipShowDelay="500"
+              >
+                {{ getColumnValue(row, column) }}
+              </span>
             </label>
           </ng-template>
         </ng-template>

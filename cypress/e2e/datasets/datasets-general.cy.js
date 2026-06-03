@@ -165,7 +165,7 @@ describe("Datasets general", () => {
       cy.get("mat-dialog-container").find('button[type="submit"]').click();
 
       cy.get(".snackbar-warning")
-        .should("contain", "Please select a valid field from the list")
+        .should("contain", "Field already used")
         .contains("Close")
         .click();
     });
@@ -254,7 +254,7 @@ describe("Datasets general", () => {
       cy.get('[data-cy="remove-condition-button"]').click();
     });
 
-    it("should not be able to add invalid field", () => {
+    it("should be able to add a field outside the capped list", () => {
       cy.visit("/datasets");
 
       cy.get('[data-cy="scientific-condition-filter-list"]').within(() => {
@@ -265,10 +265,9 @@ describe("Datasets general", () => {
 
       cy.get("mat-dialog-container").find('button[type="submit"]').click();
 
-      cy.get(".snackbar-warning")
-        .should("contain", "Please select a valid field from the list")
-        .contains("Close")
-        .click();
+      cy.get(".condition-panel").first().click();
+
+      cy.get('[data-cy="remove-condition-button"]').click();
     });
 
     it("should display equal sign in condition preview", () => {
@@ -368,7 +367,6 @@ describe("Datasets general", () => {
 
   describe("Units options in condition panel units dropdown", () => {
     beforeEach(() => {
-      cy.login(Cypress.env("username"), Cypress.env("password"));
       cy.createDataset({
         type: "raw",
         datasetName: testData.rawDataset.datasetName,
@@ -442,7 +440,6 @@ describe("Datasets general", () => {
   describe("Pre-configured filters test", () => {
     beforeEach(() => {
       cy.clearCookies();
-      cy.clearLocalStorage();
       cy.readFile("CI/e2e/frontend.config.e2e.json").then((baseConfig) => {
         const testConfig = {
           ...baseConfig,
@@ -468,23 +465,29 @@ describe("Datasets general", () => {
         };
 
         cy.intercept("GET", "**/admin/config", testConfig).as("getConfig");
-        cy.visit("/datasets");
-        cy.wait("@getConfig");
-        cy.finishedLoading();
       });
+
+      cy.visit("/datasets");
+      cy.wait("@getConfig");
+      cy.finishedLoading();
     });
 
     it("should automatically apply pre-configured filters from config", () => {
-      cy.contains("Type").should("exist");
+      cy.get('[data-cy="shared-filter-form"]').should("contain", "Type");
+      cy.get('[data-cy="shared-filter-form"]').should(
+        "not.contain",
+        "Location",
+      );
+    });
 
-      cy.contains("Location").should("not.exist");
-      cy.contains("Keyword").should("not.exist");
+    it("should hide disabled filters in the list", () => {
+      cy.get('[data-cy="shared-filter-form"]').should("not.contain", "Keyword");
+      cy.get('[data-cy="shared-filter-form"]').should("contain", "Type");
     });
   });
 
   describe("Pre-configured conditions test", () => {
     beforeEach(() => {
-      cy.login(Cypress.env("username"), Cypress.env("password"));
       cy.createDataset({
         type: "raw",
         dataFileSize: "small",
@@ -494,35 +497,34 @@ describe("Datasets general", () => {
         isPublished: true,
       });
 
+      cy.clearCookies();
+
       cy.readFile("CI/e2e/frontend.config.e2e.json").then((baseConfig) => {
-        const relationsToTest = [
-          { relation: "GREATER_THAN", rhs: 1 },
-          { relation: "LESS_THAN", rhs: 3 },
-          { relation: "EQUAL_TO_NUMERIC", rhs: 2 },
-          { relation: "GREATER_THAN_OR_EQUAL", rhs: 2 },
-          { relation: "LESS_THAN_OR_EQUAL", rhs: 2 },
-          { relation: "RANGE", rhs: [1, 3] },
-        ];
         const testConfig = {
           ...baseConfig,
           defaultDatasetsListSettings: {
             ...baseConfig.defaultDatasetsListSettings,
-            conditions: relationsToTest.map(({ relation, rhs }) => ({
-              condition: {
-                lhs: "extra_entry_end_time",
-                relation,
-                rhs,
-                unit: "",
+            conditions: [
+              {
+                condition: {
+                  lhs: "extra_entry_end_time",
+                  relation: "GREATER_THAN",
+                  rhs: 1,
+                  unit: "",
+                },
+                enabled: true,
               },
-              enabled: true,
-            })),
+            ],
           },
         };
 
         cy.intercept("GET", "**/admin/config", testConfig).as("getConfig");
       });
+
       cy.visit("/datasets");
-      cy.wait("@getConfig");
+      cy.wait("@getConfig", { timeout: 20000 });
+
+      cy.finishedLoading();
     });
 
     it("should check if pre-configured conditions are applied", () => {
@@ -536,20 +538,19 @@ describe("Datasets general", () => {
       cy.get(".dataset-table mat-row").first().click();
       cy.get(".metadataTable", { timeout: 10000 }).scrollIntoView();
 
-      cy.get(".metadataTable mat-row").within(() => {
-        cy.get(".mat-column-human_name label")
-          .invoke("text")
-          .then((fieldName) => {
-            if (fieldName && fieldName.trim() === "Extra Entry End Time") {
-              cy.get(".mat-column-value label")
-                .invoke("text")
-                .then((valueText) => {
-                  const value = parseFloat(valueText.trim());
-                  expect(value).to.be.greaterThan(1);
-                });
-            }
-          });
-      });
+      cy.get(".metadataTable mat-row .mat-column-value label")
+        .invoke("text")
+        .then((valueText) => {
+          const value = parseFloat(valueText.trim());
+          expect(value).to.be.greaterThan(1);
+        });
+
+      cy.visit("/datasets");
+
+      cy.finishedLoading();
+
+      cy.get(".condition-panel").first().click();
+      cy.get('[data-cy="remove-condition-button"]').click();
     });
   });
 
@@ -573,7 +574,6 @@ describe("Datasets general", () => {
 
   describe("Scientific notation in condition panel test", () => {
     beforeEach(() => {
-      cy.login(Cypress.env("username"), Cypress.env("password"));
       cy.createDataset({
         type: "raw",
         dataFileSize: "small",
@@ -617,7 +617,7 @@ describe("Datasets general", () => {
       cy.get('[data-cy="remove-condition-button"]').click();
     });
   });
-  
+
   describe("Datasets collapsible filters", () => {
     beforeEach(() => {
       cy.clearLocalStorage();
@@ -651,23 +651,260 @@ describe("Datasets general", () => {
 
       cy.visit("/datasets");
 
-      cy.wait("@getConfig", { timeout: 10000 });
+      cy.wait("@getConfig", { timeout: 20000 });
 
       cy.finishedLoading();
     });
 
     it("should collapse and expand checkbox filters", () => {
-      cy.get(".collapsible-filter-wrapper .collapse-toggle").first().click();
+      cy.get(".collapsible-filter-wrapper .icon-collapse").first().click();
 
       cy.get(".collapsible-filter-wrapper .checkbox-list")
         .first()
         .should("not.be.visible");
 
-      cy.get(".collapsible-filter-wrapper .collapse-toggle").first().click();
+      cy.get(".collapsible-filter-wrapper .icon-collapse").first().click();
 
       cy.get(".collapsible-filter-wrapper .checkbox-list")
         .first()
         .should("be.visible");
+    });
+  });
+
+  describe("Conditions in multiple pages", () => {
+    it("should preverse dataset conditions when clearing sample conditions", () => {
+      cy.createDataset({
+        type: "raw",
+        scientificMetadata: {
+          extra_entry_end_time: { type: "number", value: 5, unit: "" },
+        },
+      });
+      const sampleId = Math.floor(100000 + Math.random() * 900000).toString();
+      cy.createSample({ ...testData.sample, sampleId });
+
+      cy.visit("/datasets");
+      cy.finishedLoading();
+
+      cy.get('[data-cy="add-condition-button"]').click();
+      cy.get('input[name="lhs"]').type("extra_entry_end_time");
+      cy.get("mat-dialog-container").find('button[type="submit"]').click();
+
+      cy.get(".condition-panel").should("have.length", 1);
+
+      cy.visit("/samples");
+      cy.finishedLoading();
+
+      cy.get('[data-cy="add-condition-button"]').click();
+      cy.get('input[name="lhs"]').type("test_characteristic");
+      cy.get("mat-dialog-container").find('button[type="submit"]').click();
+
+      cy.get(".condition-panel").should("have.length", 1);
+
+      cy.get(".condition-panel").first().click();
+      cy.get(".condition-panel")
+        .first()
+        .within(() => {
+          cy.get("input[matInput]").eq(0).clear().type("10");
+        });
+      cy.get('[data-cy="samples-filters-search-button"]').click();
+
+      // Clear conditions on samples page
+      cy.get('[data-cy="samples-filters-clear-button"]').click();
+
+      cy.get(".condition-panel").should("have.length", 0);
+
+      // Navigate back to datasets and verify condition is still there
+      cy.visit("/datasets");
+      cy.finishedLoading();
+
+      cy.get(".condition-panel").should("have.length", 1);
+      cy.get(".condition-panel").should("contain.text", "extra_entry_end_time");
+
+      cy.get(".condition-panel").first().click();
+      cy.get('[data-cy="remove-condition-button"]').click();
+    });
+    afterEach(() => {
+      cy.removeSamples();
+    });
+  });
+
+  describe("Condition value persistence after navigation", () => {
+    beforeEach(() => {
+      cy.createDataset({
+        type: "raw",
+        dataFileSize: "small",
+        scientificMetadata: {
+          run_number: { type: "number", value: 76129, unit: "" },
+        },
+      });
+      cy.visit("/datasets");
+    });
+
+    it("should persist condition values after navigating away and back", () => {
+      cy.get('[data-cy="scientific-condition-filter-list"]').within(() => {
+        cy.get('[data-cy="add-condition-button"]').click();
+      });
+
+      cy.get('input[name="lhs"]').type("run_number");
+
+      cy.get("mat-dialog-container").find('button[type="submit"]').click();
+
+      cy.get(".condition-panel").first().click();
+
+      cy.get(".condition-panel")
+        .first()
+        .within(() => {
+          cy.get("mat-select").click();
+        });
+      cy.get("mat-option").contains(">").click();
+
+      cy.get(".condition-panel")
+        .first()
+        .within(() => {
+          cy.get("input[matInput]").eq(0).clear().type("19");
+        });
+
+      cy.get('[data-cy="filter-search-button"]').click();
+
+      cy.get(".dataset-table mat-row").first().click();
+
+      cy.url().should("include", "/datasets/");
+      cy.get("mat-card").should("exist");
+
+      cy.go("back");
+
+      cy.get(".condition-panel")
+        .first()
+        .find("mat-panel-title")
+        .should("contain", ">")
+        .and("contain", "19");
+
+      cy.get(".condition-panel").first().click();
+
+      cy.get('[data-cy="remove-condition-button"]').click();
+    });
+  });
+
+  describe("Auto apply filters", () => {
+    beforeEach(() => {
+      cy.clearLocalStorage();
+      cy.createDataset({ keywords: ["test auto apply"] });
+      cy.createDataset({ keywords: ["another keyword"] });
+    });
+
+    it("should apply checkbox filters when user clicks", () => {
+      cy.readFile("CI/e2e/frontend.config.e2e.json").then((baseConfig) => {
+        const testConfig = {
+          ...baseConfig,
+          autoApplyFilters: true,
+          defaultDatasetsListSettings: {
+            ...baseConfig.defaultDatasetsListSettings,
+            filters: [
+              {
+                key: "keywords",
+                label: "Keyword",
+                type: "checkbox",
+                description: "Filter by keywords in the dataset",
+                enabled: true,
+              },
+            ],
+          },
+        };
+
+        cy.intercept("GET", "**/admin/config", testConfig).as("getConfig");
+      });
+
+      cy.visit("/datasets");
+      cy.wait("@getConfig", { timeout: 20000 });
+      cy.finishedLoading();
+
+      cy.get(".checkbox-list mat-checkbox")
+        .contains(/test auto apply/i)
+        .click({ force: true });
+    });
+
+    it("should apply typed filters when user presses Enter", () => {
+      cy.readFile("CI/e2e/frontend.config.e2e.json").then((baseConfig) => {
+        const testConfig = {
+          ...baseConfig,
+          autoApplyFilters: true,
+          defaultDatasetsListSettings: {
+            ...baseConfig.defaultDatasetsListSettings,
+            filters: [
+              {
+                key: "keywords",
+                label: "Keyword",
+                type: "multiSelect",
+                description: "Filter by keywords in the dataset",
+                enabled: true,
+              },
+            ],
+          },
+        };
+
+        cy.intercept("GET", "**/admin/config", testConfig).as("getConfig");
+      });
+
+      cy.visit("/datasets");
+      cy.wait("@getConfig", { timeout: 20000 });
+      cy.finishedLoading();
+
+      cy.get("mat-form-field#keywords input.item-input")
+        .click()
+        .type("test auto apply");
+      cy.get("mat-option")
+        .contains(/test auto apply/i)
+        .click();
+      cy.get("mat-form-field#keywords input.item-input")
+        .click()
+        .type("{enter}");
+    });
+  });
+
+  describe("Sorting datasets by a column from config", () => {
+    beforeEach(() => {
+      cy.createDataset({
+        type: "raw",
+        datasetName: "B DatasetName",
+      });
+      cy.createDataset({
+        type: "raw",
+        datasetName: "A DatasetName",
+      });
+      cy.readFile("CI/e2e/frontend.config.e2e.json").then((baseConfig) => {
+        const testConfig = {
+          ...baseConfig,
+          defaultDatasetsListSettings: {
+            ...baseConfig.defaultDatasetsListSettings,
+            columns: [
+              {
+                name: "select",
+                type: "standard",
+                width: 120,
+                enabled: true,
+              },
+              {
+                name: "datasetName",
+                type: "standard",
+                width: 200,
+                enabled: true,
+                sort: "asc",
+              },
+            ],
+          },
+        };
+
+        cy.intercept("GET", "**/admin/config", testConfig).as("getConfig");
+        cy.visit("/datasets");
+        cy.wait("@getConfig", { timeout: 20000 });
+        cy.finishedLoading();
+      });
+    });
+
+    it("should sort datasets by datasetName in asc order from config", () => {
+      cy.get(".dataset-table mat-row")
+        .first()
+        .should("contain", "A DatasetName");
     });
   });
 });

@@ -28,6 +28,7 @@ import { LayoutModule } from "_layout/layout.module";
 import { AppConfigService } from "app-config.service";
 import { AppThemeService } from "app-theme.service";
 import { SnackbarInterceptor } from "shared/interceptors/snackbar.interceptor";
+import { AuthInterceptor } from "shared/interceptors/auth.interceptor";
 import { AuthService } from "shared/services/auth/auth.service";
 import { InternalStorage, SDKStorage } from "shared/services/auth/base.storage";
 import { CookieService } from "ngx-cookie-service";
@@ -113,6 +114,11 @@ const apiConfigurationFn = (
       multi: true,
     },
     {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AuthInterceptor,
+      multi: true,
+    },
+    {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
       useValue: {
         subscriptSizing: "dynamic",
@@ -124,6 +130,7 @@ const apiConfigurationFn = (
         return {
           dateFormat:
             appConfigService.getConfig().dateFormat || "yyyy-MM-dd HH:mm",
+          timezone: appConfigService.getConfig().timezone || "UTC",
         };
       },
       deps: [AppConfigService],

@@ -108,6 +108,9 @@ Cypress.Commands.add("isLoading", (type) => {
 
 Cypress.Commands.add("createDataset", (overwrites = {}) => {
   const { type = "raw", dataFileSize = "small", ...rest } = overwrites;
+  cy.log("Create Dataset");
+  cy.log("Type :" + type);
+  cy.log("Size :" + dataFileSize);
 
   cy.getCookie("user").then((userCookie) => {
     const user = JSON.parse(decodeURIComponent(userCookie.value));
@@ -171,11 +174,15 @@ Cypress.Commands.add("createDataset", (overwrites = {}) => {
     });
   });
 });
-Cypress.Commands.add("createProposal", (proposal) => {
+Cypress.Commands.add("createProposal", (overwrites = {}) => {
   return cy.getCookie("user").then((userCookie) => {
     const user = JSON.parse(decodeURIComponent(userCookie.value));
 
     cy.getToken().then((token) => {
+      const proposal = {
+        ...testData.proposal,
+        ...overwrites,
+      };
       cy.log("Proposal: " + JSON.stringify(proposal, null, 2));
       cy.log("User: " + JSON.stringify(user, null, 2));
 
@@ -210,6 +217,28 @@ Cypress.Commands.add("createInstrument", (instrument) => {
           "Content-Type": "application/json",
         },
         body: instrument,
+      });
+    });
+  });
+});
+
+Cypress.Commands.add("createSample", (sample) => {
+  return cy.getCookie("user").then((userCookie) => {
+    const user = JSON.parse(decodeURIComponent(userCookie.value));
+
+    cy.getToken().then((token) => {
+      cy.log("Sample: " + JSON.stringify(sample, null, 2));
+      cy.log("User: " + JSON.stringify(user, null, 2));
+
+      cy.request({
+        method: "POST",
+        url: lbBaseUrl + "/Samples",
+        headers: {
+          Authorization: token,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: sample,
       });
     });
   });
@@ -254,9 +283,11 @@ Cypress.Commands.add("deleteProposal", (id) => {
 });
 
 Cypress.Commands.add("removeDatasets", () => {
+  cy.log("Removing datasets");
+  cy.log("Loggin in as " + Cypress.env("secondaryUsername"));
   cy.login(Cypress.env("secondaryUsername"), Cypress.env("secondaryPassword"));
   cy.getToken().then((token) => {
-    const filter = { where: { datasetName: "Cypress Dataset" } };
+    const filter = { where: { } };
 
     cy.request({
       method: "GET",

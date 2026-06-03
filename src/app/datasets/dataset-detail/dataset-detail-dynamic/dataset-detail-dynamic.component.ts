@@ -28,7 +28,7 @@ import { AttachmentService } from "shared/services/attachment.service";
 import { DatePipe } from "@angular/common";
 import { OutputDatasetObsoleteDto } from "@scicatproject/scicat-sdk-ts-angular/model/outputDatasetObsoleteDto";
 import { Instrument } from "@scicatproject/scicat-sdk-ts-angular";
-import { Router } from "@angular/router";
+import { ActivatedRoute, Router } from "@angular/router";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import {
   ActionItemDataset,
@@ -70,6 +70,7 @@ export class DatasetDetailDynamicComponent implements OnInit, OnDestroy {
 
   actionItems: ActionItems = {
     datasets: [],
+    instruments: undefined,
   };
 
   constructor(
@@ -80,6 +81,7 @@ export class DatasetDetailDynamicComponent implements OnInit, OnDestroy {
     private store: Store,
     private fb: FormBuilder,
     private router: Router,
+    private route: ActivatedRoute,
     private snackBar: MatSnackBar,
   ) {}
 
@@ -99,6 +101,10 @@ export class DatasetDetailDynamicComponent implements OnInit, OnDestroy {
 
     this.subscriptions.push(
       this.store.select(selectCurrentInstrument).subscribe((instrument) => {
+        if (instrument) {
+          console.log("Updatding action items");
+          this.actionItems.instruments = [instrument];
+        }
         this.instrument = instrument;
       }),
     );
@@ -135,6 +141,13 @@ export class DatasetDetailDynamicComponent implements OnInit, OnDestroy {
       },
     );
   }
+
+  navigateToAttachmentsTab() {
+    this.router.navigate(["attachments"], {
+      relativeTo: this.route,
+    });
+  }
+
   base64MimeType(encoded: string): string {
     return this.attachmentService.base64MimeType(encoded);
   }

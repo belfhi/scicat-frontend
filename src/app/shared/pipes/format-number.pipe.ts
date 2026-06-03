@@ -1,5 +1,9 @@
 import { Pipe, PipeTransform } from "@angular/core";
 import { AppConfigService } from "app-config.service";
+
+type FormattableScalar = string | number | bigint | boolean;
+type ValueWithUnit = { value: FormattableScalar; unit?: string };
+
 @Pipe({
   name: "formatNumber",
   standalone: false,
@@ -23,32 +27,78 @@ export class FormatNumberPipe implements PipeTransform {
     }
   }
 
-  transform(value: unknown): string | number {
+  private isValueWithUnit(value: unknown): value is ValueWithUnit {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      "value" in value &&
+      this.isFormattableScalar(value.value)
+    );
+  }
+
+  private isFormattableScalar(value: unknown): value is FormattableScalar {
+    return (
+      typeof value === "number" ||
+      typeof value === "bigint" ||
+      typeof value === "string" ||
+      typeof value === "boolean"
+    );
+  }
+
+  private formatValueUnitObj(
+    value: FormattableScalar | ValueWithUnit,
+  ): FormattableScalar {
+    return this.isValueWithUnit(value)
+      ? `${value.value} ${value.unit ?? ""}`
+      : value;
+  }
+
+  transform(
+    value:
+      | FormattableScalar
+      | null
+      | undefined
+      | ValueWithUnit
+      | (FormattableScalar | ValueWithUnit)[],
+  ): string {
+    if (Array.isArray(value))
+      return String(
+        value
+          .filter((v) => this.isFormattableScalar(v) || this.isValueWithUnit(v))
+          .map((v) => this.formatValueUnitObj(v)),
+      );
+    const innerValue = this.formatValueUnitObj(value);
+    if (!this.isFormattableScalar(innerValue)) return "";
+
     // use old way if not enabled
     if (!this.enabled) {
-      if (typeof value === "number" && (value >= 1e5 || value <= 1e-5)) {
-        return value.toExponential();
+      if (
+        typeof innerValue === "number" &&
+        innerValue !== 0 &&
+        (innerValue >= 1e5 || innerValue <= 1e-5)
+      ) {
+        return innerValue.toExponential();
       }
-      return String(value);
+      return String(innerValue);
     }
 
-    if (typeof value !== "number" || !Number.isFinite(value)) {
+    if (typeof innerValue !== "number" || !Number.isFinite(innerValue)) {
       // value is not a finite number
-      return String(value);
+      return String(innerValue);
     }
 
     // Do not format integers
-    if (Number.isInteger(value)) {
-      return String(value);
+    if (Number.isInteger(innerValue)) {
+      return String(innerValue);
     }
 
     // use scientific notation if float value is large or small
-    const absoluteValue = Math.abs(value);
+    const absoluteValue = Math.abs(innerValue);
     if (absoluteValue < this.minCutoff || absoluteValue > this.maxCutoff) {
       // use scientific notation with (significantDigits - 1) decimals
-      return value.toExponential(this.significantDigits - 1);
+      return innerValue.toExponential(this.significantDigits - 1);
     }
 
-    return value.toPrecision(this.significantDigits);
+    return innerValue.toPrecision(this.significantDigits);
   }
 }

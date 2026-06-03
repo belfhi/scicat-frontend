@@ -32,7 +32,6 @@ export class ProposalSideFilterComponent implements OnInit {
   appConfig = this.appConfigService.getConfig();
   activeFilters: Record<string, string[] | DateRange> = {};
   collapsed = false;
-  expandedFilters: { [key: string]: boolean } = {};
   @Output() collapsedChange = new EventEmitter<boolean>();
 
   filterLists: FilterConfig[] = [];
@@ -70,12 +69,6 @@ export class ProposalSideFilterComponent implements OnInit {
         if (filterConfigs) {
           this.filterLists =
             this.appConfig.defaultProposalsListSettings?.filters;
-
-          this.filterLists.forEach((filter) => {
-            if (filter.type === "checkbox" && filter.enabled) {
-              this.expandedFilters[filter.key] = true;
-            }
-          });
 
           const { queryParams } = this.route.snapshot;
 
@@ -117,10 +110,6 @@ export class ProposalSideFilterComponent implements OnInit {
     this.activeFilters = { ...searchQuery };
   }
 
-  toggleFilter(key: string) {
-    this.expandedFilters[key] = !this.expandedFilters[key];
-  }
-
   setFilter(filterKey: string, value: string[]) {
     // Text filter type is not supported for proposal side panel filters
     // This is to seperate the logic of side filter panel and top text search box
@@ -144,7 +133,7 @@ export class ProposalSideFilterComponent implements OnInit {
         }),
       );
     }
-    if (this.appConfig.checkBoxFilterClickTrigger) {
+    if (this.appConfig.autoApplyFilters) {
       this.applyFilters();
     }
   }
