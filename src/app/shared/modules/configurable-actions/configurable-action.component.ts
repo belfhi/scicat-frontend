@@ -106,10 +106,6 @@ export class ConfigurableActionComponent implements OnInit, OnChanges {
     if (this.actionConfig.enabled) {
       this.disabled_condition =
         "!(" + this.prepare_action_condition(this.actionConfig.enabled) + ")";
-    } else if (this.actionConfig.disabled) {
-      this.disabled_condition = this.prepare_action_condition(
-        this.actionConfig.disabled,
-      );
     } else {
       this.disabled_condition = "false";
     }

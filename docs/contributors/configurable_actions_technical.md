@@ -65,7 +65,7 @@ When the action is triggered by a click on the button, the action's engine extra
 
 ### 4. Enable and Authorization Conditions
 
-The `enabled` or `disabled` fields are the expression that evaluates whether the action should be enabled or disabled. Only one of them is needed, if both are present, `disabled` takes the precedence. This field supports logical operators and variable references (e.g., `#Length(@files) && #MaxDownloadableSize(@totalSize)`).
+The `enabled` field is the expression that evaluates whether the action should be enabled. This field supports logical operators and variable references (e.g., `#Length(@files) && #MaxDownloadableSize(@totalSize)`).
 
 The `authorization` field restricts actions based on user or dataset properties (e.g., requiring the user to be the dataset owner).
 

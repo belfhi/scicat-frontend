@@ -15,7 +15,6 @@ export interface ActionConfig {
   authorization: string[];
   method?: string;
   enabled?: string;
-  disabled?: string;
   payload?: string;
   filename?: string;
   hidden?: string;
